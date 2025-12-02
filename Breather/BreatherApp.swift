@@ -81,6 +81,12 @@ struct ContentView: View {
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        // Warm up haptics engine
+        HapticsManager.shared.prepare()
+        return true
+    }
+    
     func application(_ application: UIApplication, handlerFor intent: INIntent) -> Any? {
         print("handlerFor intent called: \(type(of: intent))")
         if intent is BreathingExerciseIntent {
