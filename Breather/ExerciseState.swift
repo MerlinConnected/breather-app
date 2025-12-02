@@ -34,7 +34,7 @@ class ExerciseState: ObservableObject {
     
     func complete(openApp: Bool) {
         // Record the attempt
-        StatsManager.shared.recordAttempt(opened: openApp)
+        StatsManager.shared.recordAttempt(opened: openApp, appName: appName)
         
         if openApp {
             // Save timestamp to skip next time

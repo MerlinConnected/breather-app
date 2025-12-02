@@ -1,45 +1,158 @@
 import SwiftUI
 
+extension Color {
+    init(hex: UInt, alpha: Double = 1) {
+        self.init(
+            .sRGB,
+            red: Double((hex >> 16) & 0xff) / 255,
+            green: Double((hex >> 08) & 0xff) / 255,
+            blue: Double((hex >> 00) & 0xff) / 255,
+            opacity: alpha
+        )
+    }
+}
+
 struct ExerciseView: View {
     
     @EnvironmentObject var state: ExerciseState
     @StateObject var statsManager = StatsManager.shared
+
+    
+    @State private var breathProgress: CGFloat = 0 // 0 = bottom, 1 = top
+    @State private var imageScale: CGFloat = 2.0
+    @State private var showContent = false
+    
+    private let breathInDuration: Double = 8.0
+    private let breathOutDuration: Double = 8.0
+    private let maxScale: CGFloat = 4.0 // How big it gets in the middle
     
     var body: some View {
-        VStack(spacing: 40) {
-            
+        GeometryReader { geometry in
+            ZStack {
+                // Main content (shown after breathing)
+                if showContent {
+                    contentView
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(.opacity)
+                }
+                
+                // Breathing image overlay (always visible, stays at top after animation)
+                Image("BreathingImage")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 1500)
+                    .scaleEffect(imageScale)
+                    .position(
+                        x: geometry.size.width / 2,
+                        y: imageYPosition(in: geometry)
+                    )
+                    .zIndex(-1)
+                
+                // Breathing text (shown only during breathing)
+                if !showContent {
+                    Text("Pitié respire un peu")
+                        .font(.custom("PMackinacProMedium", size: 32))
+                        .foregroundStyle(Color(hex: 0xFCF2D7))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .onAppear {
+            startBreathingExercise()
+        }
+    }
+    
+    private func imageYPosition(in geometry: GeometryProxy) -> CGFloat {
+        let totalHeight = geometry.size.height + geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom
+        
+        // Start: 50% below bottom edge
+        // End: 50% above top edge
+        let startY = totalHeight + 100
+        let endY: CGFloat = -100
+        
+        return startY + (endY - startY) * breathProgress
+    }
+    
+    private var contentView: some View {
+        VStack(spacing: 80) {
             Spacer()
             
-            Text("Take a breath")
-                .font(.largeTitle)
+            Text("Maintenant qu'est-ce qu'on fait?")
+                .font(.custom("P22MackinacProBook", size: 32))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color(hex: 0xFCF2D7))
             
-            VStack(spacing: 8) {
-                Text("\(statsManager.todayAttempts)")
-                    .font(.system(size: 64, weight: .regular, design: .rounded))
+            
+            VStack(spacing: 24) {
+                if statsManager.todayAttempts >= 1 {
+                    Text("Ça fait déjà \(statsManager.todayAttempts) fois que tu vas sur \(state.appName) aujourd’hui...")
+                        .font(.custom("PMackinacProMedium", size: 20))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(8)
+                        .foregroundStyle(Color(hex: 0xFCF2D7, alpha: 0.8))
+                } else {
+                    Text("Il est vrai que tu n’as pas encore ouvert Instagram aujourd’hui...")
+                        .font(.custom("PMackinacProMedium", size: 20))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Color(hex: 0xFCF2D7, alpha: 0.8))
+                }
                 
-                Text("attempts today")
-                    .foregroundStyle(.secondary)
+                if let lastOpened = statsManager.timeSinceLastOpened(for: state.appName) {
+                    Text("La dernière fois c'était il y a \(lastOpened)")
+                        .font(.custom("PMackinacProMedium", size: 16))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Color(hex: 0xFCF2D7, alpha: 0.6))
+                }
             }
             
-            Text("You were about to open \(state.appName)")
-                .foregroundStyle(.secondary)
-            
-            Spacer()
-            
             VStack(spacing: 16) {
-                Button("Open \(state.appName)") {
-                    state.complete(openApp: true)
-                }
-                .buttonStyle(.bordered)
-                
-                Button("I'm good") {
+                Button("Résister à la tentation") {
                     state.complete(openApp: false)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.plain)
+                .padding(EdgeInsets(top: 16, leading: 24, bottom: 16, trailing: 24))
+                .bold()
+                .foregroundStyle(Color(hex: 0x030302))
+                .background(Color(hex: 0xFCF2D7))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .font(.custom("P22MackinacPro-Bold", size: 14))
+                
+                Button("Ok pour cette fois...") {
+                    state.complete(openApp: true)
+                }
+                .buttonStyle(.plain)
+                .font(.custom("P22MackinacPro-Bold", size: 14))
+                .foregroundStyle(Color(hex: 0xFCF2D7))
             }
             .padding(.bottom, 40)
         }
         .padding()
+    }
+    
+    private func startBreathingExercise() {
+        // Breath in - image rises from bottom to top, scales up then down
+        withAnimation(.easeInOut(duration: breathInDuration)) {
+            breathProgress = 1.0
+        }
+        
+        // Scale up during first half, scale down during second half
+        withAnimation(.easeIn(duration: breathInDuration / 2)) {
+            imageScale = maxScale
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + breathInDuration / 2) {
+            withAnimation(.easeOut(duration: breathInDuration / 2)) {
+                imageScale = 2.0
+            }
+        }
+        
+        // After breath in complete, show content
+        DispatchQueue.main.asyncAfter(deadline: .now() + breathInDuration) {
+            withAnimation(.easeIn(duration: 0.3)) {
+                showContent = true
+            }
+        }
     }
 }
 

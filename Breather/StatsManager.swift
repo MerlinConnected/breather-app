@@ -15,15 +15,43 @@ class StatsManager: ObservableObject {
         loadStats()
     }
     
-    func recordAttempt(opened: Bool) {
+    func recordAttempt(opened: Bool, appName: String) {
         checkAndResetIfNeeded()
         
         todayAttempts += 1
         if !opened {
             todayBlocked += 1
+        } else {
+            // Save last opened time for this app
+            UserDefaults.standard.set(Date(), forKey: "lastOpened_\(appName)")
         }
         
         saveStats()
+    }
+    
+    func lastOpened(for appName: String) -> Date? {
+        return UserDefaults.standard.object(forKey: "lastOpened_\(appName)") as? Date
+    }
+    
+    func timeSinceLastOpened(for appName: String) -> String? {
+        guard let lastOpened = lastOpened(for: appName) else {
+            return nil
+        }
+        
+        let elapsed = Date().timeIntervalSince(lastOpened)
+        
+        if elapsed < 60 {
+            return "pas très longtemps"
+        } else if elapsed < 3600 {
+            let minutes = Int(elapsed / 60)
+            return "\(minutes) minute\(minutes == 1 ? "" : "s")"
+        } else if elapsed < 86400 {
+            let hours = Int(elapsed / 3600)
+            return "\(hours) heure\(hours == 1 ? "" : "s")"
+        } else {
+            let days = Int(elapsed / 86400)
+            return "\(days) jour\(days == 1 ? "" : "s")"
+        }
     }
     
     private func checkAndResetIfNeeded() {

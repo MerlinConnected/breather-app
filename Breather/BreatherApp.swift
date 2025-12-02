@@ -8,6 +8,8 @@ struct BreatherApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.scenePhase) private var scenePhase
     
+    
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -20,7 +22,9 @@ struct ContentView: View {
     @EnvironmentObject var exerciseState: ExerciseState
     @StateObject var statsManager = StatsManager.shared
     
+    
     var body: some View {
+        
         if exerciseState.isActive {
             ExerciseView()
         } else {
@@ -83,6 +87,13 @@ class SceneDelegate: NSObject, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         print("Scene willConnectTo called")
         
+//        for family in UIFont.familyNames {
+//            print("Family: \(family)")
+//            for name in UIFont.fontNames(forFamilyName: family) {
+//                print("   \(name)")
+//            }
+//        }
+        
         if let userActivity = connectionOptions.userActivities.first {
             print("Found userActivity in connectionOptions: \(userActivity.activityType)")
             handleUserActivity(userActivity)
@@ -126,4 +137,5 @@ class SceneDelegate: NSObject, UIWindowSceneDelegate {
         case .unknown: return "App"
         }
     }
+    
 }
