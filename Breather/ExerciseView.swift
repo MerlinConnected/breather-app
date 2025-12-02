@@ -18,13 +18,13 @@ struct ExerciseView: View {
     @StateObject var statsManager = StatsManager.shared
 
     
-    @State private var breathProgress: CGFloat = 0 // 0 = bottom, 1 = top
+    @State private var breathProgress: CGFloat = 0
     @State private var imageScale: CGFloat = 2.0
     @State private var showContent = false
     
     private let breathInDuration: Double = 8.0
     private let breathOutDuration: Double = 8.0
-    private let maxScale: CGFloat = 4.0 // How big it gets in the middle
+    private let maxScale: CGFloat = 4.0
     
     var body: some View {
         GeometryReader { geometry in
@@ -65,16 +65,21 @@ struct ExerciseView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onAppear {
+            resetState()
             startBreathingExercise()
         }
         .background(Color(hex: 0x030302))
     }
     
+    private func resetState() {
+        breathProgress = 0
+        imageScale = 2.0
+        showContent = false
+    }
+    
     private func imageYPosition(in geometry: GeometryProxy) -> CGFloat {
         let totalHeight = geometry.size.height + geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom
         
-        // Start: 50% below bottom edge
-        // End: 50% above top edge
         let startY = totalHeight + 100
         let endY: CGFloat = -100
         
@@ -94,13 +99,13 @@ struct ExerciseView: View {
             
             VStack(spacing: 24) {
                 if statsManager.todayAttempts >= 1 {
-                    Text("Ça fait déjà \(statsManager.todayAttempts) fois que tu vas sur \(state.appName) aujourd’hui...")
+                    Text("Ça fait déjà \(statsManager.todayAttempts) fois que tu vas sur \(state.appName) aujourd'hui...")
                         .font(.custom("PMackinacProMedium", size: 20))
                         .multilineTextAlignment(.center)
                         .lineSpacing(8)
                         .foregroundStyle(Color(hex: 0xFCF2D7, alpha: 0.8))
                 } else {
-                    Text("Il est vrai que tu n’as pas encore ouvert Instagram aujourd’hui...")
+                    Text("Il est vrai que tu n'as pas encore ouvert Instagram aujourd'hui...")
                         .font(.custom("PMackinacProMedium", size: 20))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Color(hex: 0xFCF2D7, alpha: 0.8))
@@ -116,7 +121,10 @@ struct ExerciseView: View {
             
             VStack(spacing: 16) {
                 Button("Résister à la tentation") {
-                    state.complete(openApp: false)
+                    HapticsManager.shared.playSuccess()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        state.complete(openApp: false)
+                    }
                 }
                 .buttonStyle(.plain)
                 .padding(EdgeInsets(top: 16, leading: 24, bottom: 16, trailing: 24))
@@ -127,7 +135,10 @@ struct ExerciseView: View {
                 .font(.custom("P22MackinacPro-Bold", size: 14))
                 
                 Button("Ok pour cette fois...") {
-                    state.complete(openApp: true)
+                    HapticsManager.shared.playTap()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        state.complete(openApp: true)
+                    }
                 }
                 .buttonStyle(.plain)
                 .font(.custom("P22MackinacPro-Bold", size: 14))
@@ -138,6 +149,9 @@ struct ExerciseView: View {
     }
     
     private func startBreathingExercise() {
+        // Play blocked haptic immediately
+        HapticsManager.shared.playBlocked()
+        
         // Breath in - image rises from bottom to top, scales up then down
         withAnimation(.easeInOut(duration: breathInDuration)) {
             breathProgress = 1.0
